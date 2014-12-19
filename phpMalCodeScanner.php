@@ -23,9 +23,11 @@ class phpMalCodeScan {
     public $infected_files = array();
     private $scanned_files = array();
     private $scan_patterns = array(
+        '/if\(isset\($_GET\[[a-z][0-9][0-9]+/i',
         '/eval\(base64/i',
-        '/eval\($_/i',
-        '/\x64\x65\x63\x6f/i',
+        '/eval\(\$./i',
+        '/[ue\"\'];\$/',
+        '/;@ini/i',
     );
 
 
@@ -57,8 +59,10 @@ class phpMalCodeScan {
         $this->scanned_files[] = $file;
         foreach($this->scan_patterns as $pattern) {
             if(preg_match($pattern,$contents)) {
-                $this->infected_files[] = $file;
-                continue;
+                if($file !== __FILE__) {
+                    $this->infected_files[] = array('file' => $file, 'pattern_matched' => $pattern);
+                    break;
+                }
             }
         }
     }
@@ -69,7 +73,7 @@ class phpMalCodeScan {
             $message = "== MALICIOUS CODE FOUND == \n\n";
             $message .= "The following files appear to be infected: \n";
             foreach($this->infected_files as $inf) {
-                $message .= "  -  $inf \n";
+                $message .= "  -  ".$inf['file'] ." [".$inf['pattern_matched']."]\n";
             }
             mail(SEND_EMAIL_ALERTS_TO,'Malicious Code Found!',$message,'FROM:');
         }
