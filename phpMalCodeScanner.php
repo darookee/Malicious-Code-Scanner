@@ -20,52 +20,60 @@ define('SEND_EMAIL_ALERTS_TO','youremail@example.com');
 
 class phpMalCodeScan {
 
-	public $infected_files = array();
-	private $scanned_files = array();
-	
-	
-	function __construct() {
-		$this->scan(dirname(__FILE__));
-		$this->sendalert();
-	}
-	
-	
-	function scan($dir) {
-		$this->scanned_files[] = $dir;
-		$files = scandir($dir);
-		
-		if(!is_array($files)) {
-			throw new Exception('Unable to scan directory ' . $dir . '.  Please make sure proper permissions have been set.');
-		}
-		
-		foreach($files as $file) {
-			if(is_file($dir.'/'.$file) && !in_array($dir.'/'.$file,$this->scanned_files)) {
-				$this->check(file_get_contents($dir.'/'.$file),$dir.'/'.$file);
-			} elseif(is_dir($dir.'/'.$file) && substr($file,0,1) != '.') {
-				$this->scan($dir.'/'.$file);
-			}
-		}
-	}
-	
-	
-	function check($contents,$file) {
-		$this->scanned_files[] = $file;
-		if(preg_match('/eval\(base64/i',$contents) || preg_match('/eval\($_/i',$contents)) {
-			$this->infected_files[] = $file;
-		}
-	}
+    public $infected_files = array();
+    private $scanned_files = array();
+    private $scan_patterns = array(
+        '/eval\(base64/i',
+        '/eval\($_/i',
+        '/\x64\x65\x63\x6f/i',
+    );
 
 
-	function sendalert() {
-		if(count($this->infected_files) != 0) {
-			$message = "== MALICIOUS CODE FOUND == \n\n";
-			$message .= "The following files appear to be infected: \n";
-			foreach($this->infected_files as $inf) {
-				$message .= "  -  $inf \n";
-			}
-			mail(SEND_EMAIL_ALERTS_TO,'Malicious Code Found!',$message,'FROM:');
-		}
-	}
+    function __construct() {
+        $this->scan(dirname(__FILE__));
+        $this->sendalert();
+    }
+
+
+    function scan($dir) {
+        $this->scanned_files[] = $dir;
+        $files = scandir($dir);
+
+        if(!is_array($files)) {
+            throw new Exception('Unable to scan directory ' . $dir . '.  Please make sure proper permissions have been set.');
+        }
+
+        foreach($files as $file) {
+            if(is_file($dir.'/'.$file) && !in_array($dir.'/'.$file,$this->scanned_files)) {
+                $this->check(file_get_contents($dir.'/'.$file),$dir.'/'.$file);
+            } elseif(is_dir($dir.'/'.$file) && substr($file,0,1) != '.') {
+                $this->scan($dir.'/'.$file);
+            }
+        }
+    }
+
+
+    function check($contents,$file) {
+        $this->scanned_files[] = $file;
+        foreach($this->scan_patterns as $pattern) {
+            if(preg_match($pattern,$contents)) {
+                $this->infected_files[] = $file;
+                continue;
+            }
+        }
+    }
+
+
+    function sendalert() {
+        if(count($this->infected_files) != 0) {
+            $message = "== MALICIOUS CODE FOUND == \n\n";
+            $message .= "The following files appear to be infected: \n";
+            foreach($this->infected_files as $inf) {
+                $message .= "  -  $inf \n";
+            }
+            mail(SEND_EMAIL_ALERTS_TO,'Malicious Code Found!',$message,'FROM:');
+        }
+    }
 
 
 }
