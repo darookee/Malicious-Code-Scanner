@@ -11,6 +11,8 @@ License: GPL-2
 */
 
 
+define('OUTPUT_ALERTS', true);
+define('SEND_EMAILS', false);
 // Set to your email:
 define('SEND_EMAIL_ALERTS_TO','youremail@example.com');
 
@@ -71,11 +73,14 @@ class phpMalCodeScan {
     function sendalert() {
         if(count($this->infected_files) != 0) {
             $message = "== MALICIOUS CODE FOUND == \n\n";
-            $message .= "The following files appear to be infected: \n";
+            $message .= "The following ".count($this->infected_files)." files appear to be infected: \n";
             foreach($this->infected_files as $inf) {
                 $message .= "  -  ".$inf['file'] ." [".$inf['pattern_matched']."]\n";
             }
-            mail(SEND_EMAIL_ALERTS_TO,'Malicious Code Found!',$message,'FROM:');
+            if(SEND_EMAILS)
+                mail(SEND_EMAIL_ALERTS_TO,'Malicious Code Found!',$message,'FROM:');
+            if(OUTPUT_ALERTS)
+                echo $message;
         }
     }
 
